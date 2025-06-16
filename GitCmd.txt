@@ -1,0 +1,58 @@
+#git init
+- first step in using Git for version control. It creates a hidden .git directory in your project, where Git stores all the metadata about changes, branches, commits, and history.
+
+#git clone <repository-url>
+- Copies a remote repository to your local machine.
+
+#git branch <branch-name>
+- Creates a new branch.
+
+#git checkout <branch-name>
+- switch branch
+
+#git checkout -b <branch-name>
+- create and switch branch
+
+#git branch
+- to see the all the branches
+
+#git branch -d <branch-name>
+- delete branch
+
+#git status
+- Shows modified files, staged files, and untracked files
+
+#git add <file-name> or .(all file in that directory)
+- Moves file changes from the working directory
+
+#git commit -m "any message"
+- Take the staged changes and save them with this message explaining what I did.
+
+Staged->You have told Git which changes you want to include in the next commit using the git add command.
+
+#git log
+- see the commit history
+
+#git push origin <branch-name>
+- push the changes from local to remote repository
+
+#git pull origin <branch-name>
+- fetches the changes from remote repo to local machine and integrate it.
+
+###Merger the feature branch to master
+switch the branch to (main,master)
+git checkout main/master
+
+#git merge feature-branch
+This merges all commits from feature-branch into main.
+
+#git stash
+Temporarily saves changes without committing them.
+
+#git stash pop
+Applies the most recent stash.
+
+
+
+
+
