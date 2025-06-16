@@ -52,6 +52,14 @@ Temporarily saves changes without committing them.
 #git stash pop
 Applies the most recent stash.
 
+#### How to push  project from local machine ###
+git init
+git add .
+git commit -m "message"
+git remote add origin "http://"
+git branch -M main 
+git push -u origin main
+
 
 
 
