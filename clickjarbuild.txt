@@ -1,0 +1,9 @@
+
+# to build the jar file inside the application
+./mvnw clean package -DskipTests
+
+#build the image 
+docker build -t adeshprime17/productservicefork8s:0.0.1 .
+
+#push the image to docker hub
+docker push  adeshprime17/productservicefork8s:0.0.1

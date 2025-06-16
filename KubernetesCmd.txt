@@ -1,0 +1,184 @@
+#To start the kubernetes
+minikube start
+
+#Get all the detail of pods/deployment/service etc
+kubectl get pods/deployment/service
+
+#Get All the things present in k8s cluster
+kubectl get all 
+
+#Create deployment 
+kubectl create deployment <m-deployment> --image=<image name from docker hub>
+
+#Describe pod
+kubectl describe pod <pod-name>
+
+#Scalling deployment
+kubectl scale deployment <my-deployment> --replicas=3
+
+#See the logs
+kubectl logs <pod-name>
+
+#Delete for pod/deployment/service/namespace/pvc/configmap
+kubectl delete <pod/deployment/service/namespace> <my-pod/deployment/service/namespace/pvc>
+
+#Delete all pods in a Namespace
+kubectl delete pods --all -n <my-namespace>
+
+#Delete all resources in a Namespace
+kubectl delete all --all -n my-namespace
+
+#Go and execute cmd inside pod
+kubectl exec -it <my-pod> -- /bin/bash
+exp->kubectl exec my-pod -- ls -l / (to check the running processes inside pods)
+
+#Edit in deployment (open yaml file)
+kubectl edit deployment <my-deployment>
+
+#How to create pod
+kubectl apply -f mypod.yaml
+
+#Delete pod
+kubectl delete -f my-pod.yaml
+
+
+## service-deployment.yaml (code present in the repo)
+
+1. StatefulSet for Eureka
+- Ensures Eureka pod has a stable network identity (serviceName: "eureka").
+- Deploys one replica (replicas: 1).
+- Uses the image adeshprime17/serviceregistryfork8s:0.0.1.
+- Opens port 8761 for service discovery.
+
+2. Headless Service (clusterIP: None)
+- Allows direct pod communication without load balancing.
+- Other services can resolve Eureka using DNS instead of a virtual IP.
+
+3. NodePort Service (eureka-lb)
+- Exposes Eureka outside the Kubernetes cluster.
+- Maps port 80 (external) to port 8761 (container).
+- Allows external clients to access Eureka without an Ingress.
+
+# StatefulSet -> It maintain a unique for each pod,ensuring the order and stability of the pod.
+A Service Registry (like Eureka) is stateful because it remembers which services are available, their status, and where they are running.
+
+#Headless service (clusterIp:none)
+its does not have a stable virtual ip address, instead, it allows direct communicaiton with individual pods
+- Normally, a Kubernetes Service provides load balancing with a virtual IP to route traffic to multiple pods.
+- When clusterIP: None is used, Kubernetes skips load balancing and gives each pod its own DNS record.
+
+#NodePort service
+A NodePort Service exposes a service outside the Kubernetes cluster on a specific port of the worker nodes.
+
+##config-server-deployment.yaml
+
+1. Deployment (config-server-app)
+
+- Creates a single replica (replicas: 1) of the Config Server.
+- Uses RollingUpdate strategy (maxSurge: 1 (one extra pod to be created during an update), maxUnavailable: 1 (at least one pod remain available during change in deployment)) for smooth updates without downtime.
+- Pulls the image adeshprime17/configserverfork8s:0.0.1 (imagePullPolicy: Always).
+- Opens port 9296 for service access.
+- Reads EUREKA_SERVER_ADDRESS from the eureka-cm ConfigMap (externalized configuration)
+
+2. Service (config-server-svc)
+- Exposes config-server-app for communication between pods.
+- Uses a selector (app: config-server-app) to bind the service to the pod.
+- Maps port 80 (external) to target port 9296 (container).
+
+#Deployment
+manages the lifecycle of your application, ensuring controlled updates and maintaining availability.
+- Ensures automatic restarts in case of failure.
+- Allows scaling based on traffic demand.
+- Simplifies updates without disrupting live services
+
+#Service
+A Service in Kubernetes allows communication between pods without needing direct pod IP addresses.
+Other microservices (like API Gateway) can access the Config Server without needing to track pod IPs
+- Provides stable networking between microservices.
+- Eliminates the need for microservices to track pod IP changes.
+- Enables load balancing when multiple replicas are used.
+
+The Config Server connects internally within the Kubernetes cluster using the Service (config-server-svc), which allows other microservices to reach it without needing to know its specific pod IP address.
+Internal Connection Mechanism
+- Service Discovery via DNS
+- Kubernetes provides DNS resolution for services.
+- Other microservices can access the Config Server using the service name instead of a direct IP.
+- Example URL:
+http://config-server-svc:80 
+- This request will be automatically routed to the correct pod’s 9296 port.
+- Pod Selection with Labels
+- The service selects the Config Server pod using this rule:
+selector:
+  app: config-server-app
+- Any pod matching this label is automatically connected to the service.
+- Port Forwarding
+- Kubernetes handles port mapping:
+- Port 80 (exposed by the service) is forwarded to port 9296 (inside the pod).
+- This ensures external apps using http://config-server-svc:80 will reach the Config Server properly.
+- Microservices Connecting to Config Server
+- Spring Boot microservices can fetch configurations via:
+spring.config.import=http://config-server-svc:80
+
+#Config-Map
+ConfigMaps define environment variables for microservices, allowing externalized configurations in Kubernetes.
+- Eureka ConfigMap (eureka-cm)
+- Stores the Eureka service address: "http://eureka-0.eureka:8761/eureka".
+- Used by microservices to register with Eureka (service discovery).
+- Config Server ConfigMap (config-cm)
+- Stores the Config Server URL: "http://config-server-svc:80".
+- Microservices use this to fetch configurations dynamically from the Config Server.
+- MySQL ConfigMap (mysql-cm)
+- Stores the hostname for MySQL StatefulSet: "mysql-0.mysql".
+- Used by microservices needing database access without hardcoding connection details.
+These ConfigMaps enable flexible, centralized configuration management, making applications more portable and scalable. 🚀
+
+#Mysql-deployment.yaml
+MySQL deployment in Kubernetes ensures persistent storage, stateful management, and database initialization using various components.
+
+1. Persistent Volume (PV)
+- Creates a dedicated storage volume (1Gi).
+- Uses hostPath for local storage on a development setup (/run/desktop/mnt/host/c/temp/testfiles).
+- Ensures data persists even if the pod is restarted.
+
+2. Persistent Volume Claim (PVC)
+- Requests 1Gi of storage from the Persistent Volume (mysql-pv).
+- Defines access mode as ReadWriteOnce (only one node can write at a time).
+- Used by the MySQL pod to ensure persistent database storage.
+
+3. StatefulSet for MySQL
+- Uses StatefulSet (not Deployment) since MySQL needs a stable hostname and persistent storage.
+- Defines one replica (replicas: 1) for MySQL.
+- Uses environment variables to set the root password (MYSQL_ROOT_PASSWORD=root).
+- Mounts:
+- Persistent Storage (/var/lib/mysql) → Stores MySQL database files.
+- Initialization Script (/docker-entrypoint-initdb.d) → Runs SQL commands from mysql-initdb-cm.
+
+4. ConfigMap for DB Initialization
+- Stores SQL commands to create databases (paymentdb, orderdb, productdb).
+- Mounted as a volume (mysql-initdb) so MySQL automatically initializes databases on startup.
+
+5. Headless Service (clusterIP: None)
+- Enables direct pod communication instead of routing traffic through a virtual IP.
+- Ensures MySQL instances can talk directly within the cluster (mysql-0.mysql DNS resolution).
+- Exposes port 3306 for MySQL access.
+
+
+#PV ->It is a physical storage i the cluster,configured by an administrator
+- Defines actual storage (e.g., NFS, local disk, cloud storage).
+- Created independently of a pod.
+- Can be shared by multiple pods.
+
+#PVC -> A PVC is a request for storage made by a pod.
+- Pods use PVCs to access PV storage.
+- Defines how much storage the pod needs.
+- Binds automatically to an available PV that matches its request.
+
+
+#Apigateway-deployment.yaml
+
+1Deployment same as all the other service with name (cloud-gateway-app)
+
+2. LoadBalancer Service (cloud-gateway-svc)
+- Exposes Cloud Gateway externally using LoadBalancer.
+- Routes incoming traffic from port 80(external) to target port 9090(request by other service) inside the pod.
+- Uses a selector (app: cloud-gateway-app) to bind the service to the correct pods.
