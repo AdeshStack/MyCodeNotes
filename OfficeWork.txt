@@ -1,0 +1,13 @@
+
+#Today work
+
+#Completed
+rota is completed and i tried to anaylze the gua backend feed but i need more time to resolve this issue 
+
+
+#About to do 
+so i started gub_api and anaylze the issue the issue is password is hardcodeed in this file() which we need to take this password as evnvironmental variable
+yesterday i attended the CDO townhall which took 2 hr
+i will update the rota for next month as pirithvi said to make change.
+may be i can connect to devika
+
